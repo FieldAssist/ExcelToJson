@@ -289,9 +289,9 @@ namespace FromExcelToJson
                 countDoEvents = 0;
 
                 sw.Close();
-                File.WriteAllText(outputFile, sb.ToString());
+                //File.WriteAllText(outputFile, sb.ToString());
                 //ResultText = File.ReadAllText(outputFile);
-                CallAPI(sb.ToString());
+                CallAPI(sb.ToString(), "", "", "");//Enter the details to call the Api
             }
 
             iiii++;
@@ -300,10 +300,10 @@ namespace FromExcelToJson
             //return (count);
         }
 
-        private bool CallAPI(string json)
+        private bool CallAPI(string json, string baseURL, string Api, string credentialString)
         {
             HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri("http://api-debug.fieldassist.in/");
+            client.BaseAddress = new Uri(baseURL);
 
             client.DefaultRequestHeaders.Accept.Add(
                new MediaTypeWithQualityHeaderValue("application/json"));
@@ -312,12 +312,12 @@ namespace FromExcelToJson
             // client.DefaultRequestHeaders.Accept.Add(
             //   new MediaTypeWithQualityHeaderValue("application/xml"));
 
-            var credentials = Encoding.ASCII.GetBytes("JockeyIndia-Demo:TNU3RuVatbCx71gwMHxJlz0kP1sk7zttFxkX5dlrQA2p2");
+            var credentials = Encoding.ASCII.GetBytes(credentialString);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
 
             var validJson = JsonConvert.DeserializeObject<List<SkuNorms>>(json);
 
-            var response = client.PostAsJsonAsync("api/V3/SkuSalesData/UploadSkuNorms", validJson).Result;
+            var response = client.PostAsJsonAsync(Api, validJson).Result;
 
             // if using xml
             // var response = client.PostAsXmlAsync("api/products/Create", product).Result;
