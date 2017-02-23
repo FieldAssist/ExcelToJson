@@ -22,6 +22,7 @@ namespace FromExcelToJson
     /// </summary>
     public partial class MainWindow : Window
     {
+
         #region Public Fields
 
 
@@ -32,6 +33,8 @@ namespace FromExcelToJson
         public const string FLD_BaseURL = "BaseURL";
         public const string FLD_ApiURL = "ApiURL";
         public const string FLD_Credentials = "Credentials";
+        public const string FLD_IsGet = "IsGet";
+        public const string FLD_IsPost = "IsPost";
 
 
         public static readonly DependencyProperty ExcelFileNameProperty = DependencyProperty.Register(
@@ -46,6 +49,10 @@ namespace FromExcelToJson
             FLD_ResultText, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty CredentialsProperty = DependencyProperty.Register(
                     FLD_Credentials, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty IsGetProperty = DependencyProperty.Register(
+                    FLD_IsGet, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty IsPostProperty = DependencyProperty.Register(
+                            FLD_IsPost, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 
         #endregion Public Fields
 
@@ -99,10 +106,6 @@ namespace FromExcelToJson
                 this.SetValue(ApiURLProperty, value);
             }
         }
-
-        /// <summary>
-        /// Indicates if the first row has field names
-        /// </summary>
         public bool FirstRowHasFieldNames
         {
             get
@@ -137,7 +140,28 @@ namespace FromExcelToJson
                 this.SetValue(ResultTextProperty, value);
             }
         }
-
+        public bool IsGet
+        {
+            get
+            {
+                return (bool)this.GetValue(IsGetProperty);
+            }
+            set
+            {
+                this.SetValue(IsPostProperty, value);
+            }
+        }
+        public bool IsPost
+        {
+            get
+            {
+                return (bool)this.GetValue(IsPostProperty);
+            }
+            set
+            {
+                this.SetValue(IsPostProperty, value);
+            }
+        }
         #endregion Public Properties
 
         #region Public Methods
@@ -161,14 +185,6 @@ namespace FromExcelToJson
         #endregion Public Methods
 
         #region Private Methods
-
-        /// <summary>
-        /// Gets the excel cell value as a string
-        /// </summary>
-        /// <param name="wks">The WKS.</param>
-        /// <param name="row">The row.</param>
-        /// <param name="col">The col.</param>
-        /// <returns></returns>
         private static string GetCellStringValue(ExcelWorksheet wks, int row, int col)
         {
             object cVal = wks.Cells[row, col].Value;
@@ -185,44 +201,54 @@ namespace FromExcelToJson
             {
                 this.Cursor = Cursors.Wait;
                 DoEvents();
-                FileInfo infile = new FileInfo(ExcelFileName);
-                using (ExcelPackage exp = new ExcelPackage(infile))
+                if (IsPost)
                 {
-                    if (exp.Workbook.Worksheets.Count > 0)
+                    FileInfo infile = new FileInfo(ExcelFileName);
+                    using (ExcelPackage exp = new ExcelPackage(infile))
                     {
-                        ExcelWorksheet ws = exp.Workbook.Worksheets.First();
-                        var start = ws.Dimension.Start;
-                        var end = ws.Dimension.End;
-
-                        Dictionary<int, string> fieldNames = new Dictionary<int, string>();
-                        int firstRow = start.Row;
-                        if (FirstRowHasFieldNames)
+                        if (exp.Workbook.Worksheets.Count > 0)
                         {
-                            for (int x = start.Column; x <= end.Column; x++)
+                            ExcelWorksheet ws = exp.Workbook.Worksheets.First();
+                            var start = ws.Dimension.Start;
+                            var end = ws.Dimension.End;
+
+                            Dictionary<int, string> fieldNames = new Dictionary<int, string>();
+                            int firstRow = start.Row;
+                            if (FirstRowHasFieldNames)
                             {
-                                //fieldNames.Add(x, GetCellStringValue(ws, x, start.Row));
-                                fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
+                                for (int x = start.Column; x <= end.Column; x++)
+                                {
+                                    //fieldNames.Add(x, GetCellStringValue(ws, x, start.Row));
+                                    fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
+                                }
+                                firstRow++;
                             }
-                            firstRow++;
+                            else
+                            {
+                                for (int x = start.Column; x <= end.Column; x++)
+                                {
+                                    //fieldNames.Add(x, string.Format("Column_{0}", x));
+                                    fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
+                                }
+                                firstRow++;
+                            }
+
+                            var count = GenerateJsonFile(ExcelFileName, ws, start, end, fieldNames, firstRow);
+                            MessageBox.Show($"Total Entries Sent - {count}", "Job Done");
+
                         }
                         else
                         {
-                            for (int x = start.Column; x <= end.Column; x++)
-                            {
-                                //fieldNames.Add(x, string.Format("Column_{0}", x));
-                                fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
-                            }
-                            firstRow++;
+                            MessageBox.Show("Looks like there are no worksheets!");
                         }
-
-                        var count = GenerateJsonFile(ExcelFileName, ws, start, end, fieldNames, firstRow);
-                        MessageBox.Show($"Total Entries Sent - {count}", "Job Done");
-
                     }
-                    else
-                    {
-                        MessageBox.Show("Looks like there are no worksheets!");
-                    }
+                }
+                else if (IsGet)
+                {
+                    var response = CallAPI("", BaseURL, ApiURL, Credentials, false);
+                    FileInfo infile = new FileInfo(ExcelFileName);
+                    string outputFilejson = ExcelFileName.Replace(infile.Extension, $"_Response.json");
+                    File.WriteAllText(outputFilejson, response.Content.ReadAsStringAsync().Result);
                 }
             }
             catch (Exception ex)
@@ -279,34 +305,59 @@ namespace FromExcelToJson
                 string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
                 File.WriteAllText(outputFilejson, sb.ToString());
 
-                string response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
-                File.WriteAllText(responseFilejson, response);
-
+                var response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
+                File.WriteAllText(responseFilejson, response.Content.ReadAsStringAsync().Result);
                 //ResultText = File.ReadAllText(outputFile);
-
-
             }
             return (count);
         }
 
-        private string CallAPI(string json, string baseURL, string Api, string credentialString)
+        private HttpResponseMessage CallAPI(string body, string baseURL, string api, string credentialString, bool IsXML = false)
         {
             HttpClient client = new HttpClient();
             client.BaseAddress = new Uri(baseURL);
             var credentials = Encoding.ASCII.GetBytes(credentialString);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
-            // if using xml
-            // client.DefaultRequestHeaders.Accept.Add(
-            //   new MediaTypeWithQualityHeaderValue("application/xml"));
-            //var response = client.PostAsXmlAsync(Api, validJson).Result;
+            if (IsXML)
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
+            }
+            else
+            {
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            }
+            if (IsGet)
+            {
+                var response = client.GetAsync(api).Result;
+                return response;
+                //return $"{baseURL}-{Api}-{credentialString}--Get";
+            }
+            else if (IsPost)
+            {
+                if (IsXML)
+                {
+                    //var validXML = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
 
-            //If Using Json
-
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
-            //var response = client.PostAsJsonAsync(Api, validJson).Result;
-            //return response.Content.ToString();
-            return $"{baseURL}-{Api}-{credentialString}";
+                    var request = new HttpRequestMessage(HttpMethod.Post, api);
+                    request.Content = new StringContent(body, Encoding.UTF8, "application/xml");
+                    var response = client.SendAsync(request).Result;
+                    return response;
+                    //var response = client.PostAsXmlAsync(Api, validXML).Result;
+                    //return $"{baseURL}-{api}-{credentialString}-Post-XML";
+                }
+                else
+                {
+                    var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
+                    var request = new HttpRequestMessage(HttpMethod.Post, api);
+                    request.Content = new StringContent(body, Encoding.UTF8, "application/xml");
+                    var response = client.SendAsync(request).Result;
+                    //var response = client.PostAsJsonAsync(Api, validJson).Result;
+                    return response;
+                    //return $"{baseURL}-{api}-{credentialString}-Post-JSON";
+                }
+            }
+            else
+                return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { ReasonPhrase = "No Method Specified" };
         }
 
 

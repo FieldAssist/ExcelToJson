@@ -135,24 +135,45 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <CheckBox
-				Grid.Row="1"
-				Grid.Column="1"
+				Grid.Row="0"
+				Grid.Column="0"
 				Margin="4,2,4,2"
 				HorizontalAlignment="Stretch"
 				VerticalAlignment="Center"
 				IsChecked="{Binding FirstRowHasFieldNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 				Content="Field Names In first row"/>
+            <RadioButton
+                GroupName="method"
+                Grid.Row="1"
+                Grid.Column="0"
+                Margin="4,2,4,2"
+                HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				IsChecked="{Binding IsGet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Content="Get"
+                />
+            <RadioButton
+                GroupName="method"
+                Grid.Row="1"
+                Grid.Column="1"
+                Margin="4,2,4,2"
+                HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				IsChecked="{Binding IsPost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Content="Post"
+                />
+
             <Button
-				Grid.Column="3"
+				Grid.Column="2"
+                Grid.Row="0"
 				Grid.RowSpan="2"
 				Margin="4,2,4,2"
 				Padding="10,2,10,2"
-				Content="Generate Json"
-				ToolTip="Generate Json From Excel"
+				Content="Run Api Call"
+				ToolTip="Generate Json and Call Api"
 				Click="GenerateJson_Click"/>
         </Grid>
 
