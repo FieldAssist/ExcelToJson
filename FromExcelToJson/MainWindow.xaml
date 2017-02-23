@@ -6,27 +6,30 @@
 		xmlns:local="clr-namespace:FromExcelToJson"
 		mc:Ignorable="d"
 		Title="Convert From Excel To JSON" Height="350" Width="525">
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-			<RowDefinition Height="Auto"/>
-		</Grid.RowDefinitions>
-		<Grid
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid
 			Grid.Row="0">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="Auto"/>
-			</Grid.ColumnDefinitions>
-			<TextBlock
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock
 				Grid.Column="0"
 				Margin="4,2,4,2"
 				HorizontalAlignment="Right"
 				VerticalAlignment="Center"
 				Text="Excel File Name"/>
 
-			<TextBox
+            <TextBox
 				Grid.Column="1"
 				Margin="4,2,4,2"
 				HorizontalAlignment="Stretch"
@@ -34,7 +37,8 @@
 				HorizontalContentAlignment="Left"
 				TextWrapping="NoWrap"
 				Text="{Binding ExcelFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-			<Button
+
+            <Button
 				Grid.Column="2"
 				Margin="4,2,4,2"
 				Padding="10,2,10,2"
@@ -43,9 +47,77 @@
 				Click="GetExcelFile_Click"/>
 
 
-		</Grid>
-		<TextBox
-				Grid.Row="1"
+        </Grid>
+        <Grid
+			Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock
+				Grid.Column="0"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Text="BaseURl"/>
+
+            <TextBox
+				Grid.Column="1"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+				HorizontalContentAlignment="Left"
+				TextWrapping="NoWrap"
+				Text="{Binding BaseURL, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </Grid>
+        <Grid
+			Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock
+				Grid.Column="0"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Text="APi Url"/>
+
+            <TextBox
+				Grid.Column="1"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+				HorizontalContentAlignment="Left"
+				TextWrapping="NoWrap"
+				Text="{Binding ApiURL, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+        </Grid>
+        <Grid
+			Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock
+				Grid.Column="0"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Text="Credentials "/>
+
+            <TextBox
+				Grid.Column="1"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+				HorizontalContentAlignment="Left"
+				TextWrapping="NoWrap"
+				Text="{Binding Credentials, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+        </Grid>
+        <TextBox
+				Grid.Row="4"
 				Grid.Column="1"
 				Margin="4,2,4,2"
 				HorizontalAlignment="Stretch"
@@ -54,37 +126,19 @@
 				VerticalScrollBarVisibility="Auto"
 				TextWrapping="Wrap"
 				Text="{Binding ResultText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-		<Grid
-			Grid.Row="2">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="Auto"/>
-			</Grid.RowDefinitions>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="Auto"/>
+        <Grid
+			Grid.Row="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
 
-			</Grid.ColumnDefinitions>
-
-
-			<TextBlock
-				Grid.Row="0"
-				Grid.Column="0"
-				Margin="4,2,4,2"
-				HorizontalAlignment="Right"
-				VerticalAlignment="Center"
-				Text="Collection Element"/>
-			<TextBox
-				Grid.Row="0"
-				Grid.Column="1"
-				Margin="4,2,4,2"
-				HorizontalAlignment="Stretch"
-				VerticalAlignment="Center"
-				HorizontalContentAlignment="Left"
-				TextWrapping="NoWrap"
-				Text="{Binding CollectionElement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-			<CheckBox
+            </Grid.ColumnDefinitions>
+            <CheckBox
 				Grid.Row="1"
 				Grid.Column="1"
 				Margin="4,2,4,2"
@@ -92,7 +146,7 @@
 				VerticalAlignment="Center"
 				IsChecked="{Binding FirstRowHasFieldNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 				Content="Field Names In first row"/>
-			<Button
+            <Button
 				Grid.Column="3"
 				Grid.RowSpan="2"
 				Margin="4,2,4,2"
@@ -100,7 +154,7 @@
 				Content="Generate Json"
 				ToolTip="Generate Json From Excel"
 				Click="GenerateJson_Click"/>
-		</Grid>
+        </Grid>
 
-	</Grid>
+    </Grid>
 </Window>

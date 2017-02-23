@@ -24,49 +24,28 @@ namespace FromExcelToJson
     {
         #region Public Fields
 
-        /// <summary>
-        /// The row xml element container
-        /// </summary>
-        public const string FLD_CollectionElement = "CollectionElement";
 
-        /// <summary>
-        /// Excel file name
-        /// </summary>
         public const string FLD_ExcelFileName = "ExcelFileName";
-
-        /// <summary>
-        /// Indicates if the first row has field names
-        /// </summary>
         public const string FLD_FirstRowHasFieldNames = "FirstRowHasFieldNames";
 
-        /// <summary>
-        /// Result text
-        /// </summary>
         public const string FLD_ResultText = "ResultText";
+        public const string FLD_BaseURL = "BaseURL";
+        public const string FLD_ApiURL = "ApiURL";
+        public const string FLD_Credentials = "Credentials";
 
-        /// <summary>
-        /// The row xml element container
-        /// </summary>
-        public static readonly DependencyProperty CollectionElementProperty = DependencyProperty.Register(
-            FLD_CollectionElement, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("Cities", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 
-        /// <summary>
-        /// Excel file name
-        /// </summary>
         public static readonly DependencyProperty ExcelFileNameProperty = DependencyProperty.Register(
             FLD_ExcelFileName, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-
-        /// <summary>
-        /// Indicates if the first row has field names
-        /// </summary>
+        public static readonly DependencyProperty BaseURLProperty = DependencyProperty.Register(
+            FLD_BaseURL, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty ApiURLProperty = DependencyProperty.Register(
+            FLD_ApiURL, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty FirstRowHasFieldNamesProperty = DependencyProperty.Register(
             FLD_FirstRowHasFieldNames, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-
-        /// <summary>
-        /// Result text
-        /// </summary>
         public static readonly DependencyProperty ResultTextProperty = DependencyProperty.Register(
             FLD_ResultText, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty CredentialsProperty = DependencyProperty.Register(
+                    FLD_Credentials, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 
         #endregion Public Fields
 
@@ -83,21 +62,6 @@ namespace FromExcelToJson
         #region Public Properties
 
         /// <summary>
-        /// The row xml element container
-        /// </summary>
-        public string CollectionElement
-        {
-            get
-            {
-                return (string)this.GetValue(CollectionElementProperty);
-            }
-            set
-            {
-                this.SetValue(CollectionElementProperty, value);
-            }
-        }
-
-        /// <summary>
         /// Excel file name
         /// </summary>
         public string ExcelFileName
@@ -109,6 +73,30 @@ namespace FromExcelToJson
             set
             {
                 this.SetValue(ExcelFileNameProperty, value);
+            }
+        }
+
+        public string BaseURL
+        {
+            get
+            {
+                return (string)this.GetValue(BaseURLProperty);
+            }
+            set
+            {
+                this.SetValue(BaseURLProperty, value);
+            }
+        }
+
+        public string ApiURL
+        {
+            get
+            {
+                return (string)this.GetValue(ApiURLProperty);
+            }
+            set
+            {
+                this.SetValue(ApiURLProperty, value);
             }
         }
 
@@ -127,9 +115,17 @@ namespace FromExcelToJson
             }
         }
 
-        /// <summary>
-        /// Result text
-        /// </summary>
+        public string Credentials
+        {
+            get
+            {
+                return (string)this.GetValue(CredentialsProperty);
+            }
+            set
+            {
+                this.SetValue(CredentialsProperty, value);
+            }
+        }
         public string ResultText
         {
             get
@@ -146,7 +142,7 @@ namespace FromExcelToJson
 
         #region Public Methods
 
-        [SecurityPermissionAttribute(SecurityAction.Demand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+        [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.UnmanagedCode)]
         public void DoEvents()
         {
             DispatcherFrame frame = new DispatcherFrame();
@@ -190,7 +186,6 @@ namespace FromExcelToJson
                 this.Cursor = Cursors.Wait;
                 DoEvents();
                 FileInfo infile = new FileInfo(ExcelFileName);
-                string outputFile = ExcelFileName.Replace(infile.Extension, ".json");
                 using (ExcelPackage exp = new ExcelPackage(infile))
                 {
                     if (exp.Workbook.Worksheets.Count > 0)
@@ -220,11 +215,9 @@ namespace FromExcelToJson
                             firstRow++;
                         }
 
-                        GenerateJsonFile(outputFile, ws, start, end, fieldNames, firstRow);
-                        if (MessageBox.Show("Do You want to open output file?", "Open the file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                        {
-                            Process.Start(outputFile);
-                        }
+                        var count = GenerateJsonFile(ExcelFileName, ws, start, end, fieldNames, firstRow);
+                        MessageBox.Show($"Total Entries Sent - {count}", "Job Done");
+
                     }
                     else
                     {
@@ -242,11 +235,12 @@ namespace FromExcelToJson
             }
         }
 
-        private void GenerateJsonFile(string outputFile, ExcelWorksheet ws,
+        private long GenerateJsonFile(string outputFile, ExcelWorksheet ws,
             ExcelCellAddress start, ExcelCellAddress end, Dictionary<int, string> fieldNames, int firstRow)
         {
-            var iiii = 0;
-            for (int jsonStartRow = 4501, jsonendRow = jsonStartRow + 1499; jsonStartRow <= end.Row; jsonStartRow += 1500, jsonendRow += 1500)
+            long count = 0;
+            FileInfo infile = new FileInfo(outputFile);
+            for (int jsonStartRow = firstRow, jsonendRow = jsonStartRow + 1499; jsonStartRow <= end.Row; jsonStartRow += 1500, jsonendRow += 1500)
             {
                 StringBuilder sb = new StringBuilder();
                 StringWriter sw = new StringWriter(sb);
@@ -257,19 +251,15 @@ namespace FromExcelToJson
                 jsonWriter.Formatting = Newtonsoft.Json.Formatting.Indented;
 
 
-                int count = 0;
-                int countDoEvents = 0;
                 // jsonWriter.WriteStartObject();
                 //jsonWriter.WritePropertyName(CollectionElement);
                 jsonWriter.WriteStartArray();
                 for (int row = jsonStartRow; row <= jsonendRow && row <= end.Row; row++)
                 {
                     count++;
-                    countDoEvents++;
-                    if (countDoEvents >= 10)
+                    if (count % 1000 == 0 || row >= end.Row)
                     {
-                        ResultText = "Reading record " + count;
-                        countDoEvents = 0;
+                        ResultText = $"Done upto Row {count}\n{ResultText}";
                         DoEvents();
                     }
                     jsonWriter.WriteStartObject();
@@ -279,61 +269,44 @@ namespace FromExcelToJson
                         jsonWriter.WriteValue(GetCellStringValue(ws, row, col));
                     }
                     jsonWriter.WriteEndObject();
+
                 }
                 jsonWriter.WriteEndArray();
                 //jsonWriter.WriteEndObject();
                 jsonWriter.Close();
-
-
-                ResultText = "Ended reading writing file " + outputFile;
-                countDoEvents = 0;
-
                 sw.Close();
-                //File.WriteAllText(outputFile, sb.ToString());
+                string outputFilejson = outputFile.Replace(infile.Extension, $"_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
+                string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
+                File.WriteAllText(outputFilejson, sb.ToString());
+
+                string response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
+                File.WriteAllText(responseFilejson, response);
+
                 //ResultText = File.ReadAllText(outputFile);
-                CallAPI(sb.ToString(), "", "", "");//Enter the details to call the Api
+
+
             }
-
-            iiii++;
-
-
-            //return (count);
+            return (count);
         }
 
-        private bool CallAPI(string json, string baseURL, string Api, string credentialString)
+        private string CallAPI(string json, string baseURL, string Api, string credentialString)
         {
             HttpClient client = new HttpClient();
             client.BaseAddress = new Uri(baseURL);
-
-            client.DefaultRequestHeaders.Accept.Add(
-               new MediaTypeWithQualityHeaderValue("application/json"));
-
+            var credentials = Encoding.ASCII.GetBytes(credentialString);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
             // if using xml
             // client.DefaultRequestHeaders.Accept.Add(
             //   new MediaTypeWithQualityHeaderValue("application/xml"));
+            //var response = client.PostAsXmlAsync(Api, validJson).Result;
 
-            var credentials = Encoding.ASCII.GetBytes(credentialString);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
+            //If Using Json
 
-            var validJson = JsonConvert.DeserializeObject<List<SkuNorms>>(json);
-
-            var response = client.PostAsJsonAsync(Api, validJson).Result;
-
-            // if using xml
-            // var response = client.PostAsXmlAsync("api/products/Create", product).Result;
-
-            if (response.IsSuccessStatusCode)
-            {
-                // product added
-                return true;
-            }
-            else
-            {
-                // call function to log error if http status is not 200
-
-                return false;
-            }
-
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+            //var response = client.PostAsJsonAsync(Api, validJson).Result;
+            //return response.Content.ToString();
+            return $"{baseURL}-{Api}-{credentialString}";
         }
 
 
@@ -354,10 +327,10 @@ namespace FromExcelToJson
         #endregion Private Methods
     }
 
-    public class SkuNorms
-    {
-        public string ProductERPId { get; set; }
-        public string RetailerCode { get; set; }
-        public int ProductType { set; get; }
-    }
+    //public class SkuNorms
+    //{
+    //    public string ProductERPId { get; set; }
+    //    public string RetailerCode { get; set; }
+    //    public int ProductType { set; get; }
+    //}
 }
