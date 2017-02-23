@@ -62,6 +62,8 @@ namespace FromExcelToJson
         {
             InitializeComponent();
             this.DataContext = this;
+            this.Credentials = "<USER>:TNU3RuVatbCx71gwMHxJlz0kP1sk7zttFxkX5dlrQA2p2";
+            this.BaseURL = "http://api-debug.fieldassist.in";
         }
 
         #endregion Public Constructors
@@ -349,7 +351,7 @@ namespace FromExcelToJson
                 {
                     var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
                     var request = new HttpRequestMessage(HttpMethod.Post, api);
-                    request.Content = new StringContent(body, Encoding.UTF8, "application/xml");
+                    request.Content = new StringContent(body, Encoding.UTF8, "application/json");
                     var response = client.SendAsync(request).Result;
                     //var response = client.PostAsJsonAsync(Api, validJson).Result;
                     return response;
