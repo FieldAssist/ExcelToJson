@@ -57,7 +57,7 @@ namespace FromExcelToJson
         public static readonly DependencyProperty IsPostProperty = DependencyProperty.Register(
                             FLD_IsPost, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty SplitIntervalProperty = DependencyProperty.Register(
-                            FLD_SplitInterval, typeof(int), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+                            FLD_SplitInterval, typeof(int), typeof(MainWindow), new FrameworkPropertyMetadata(1500, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty OnlyToJsonProperty = DependencyProperty.Register(
                             FLD_OnlyToJson, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         #endregion Public Fields
@@ -265,7 +265,7 @@ namespace FromExcelToJson
                                 firstRow++;
                             }
 
-                            var count = GenerateJsonFile(ExcelFileName, ws, start, end, fieldNames, firstRow);
+                            var count = PostCallJson(ExcelFileName, ws, start, end, fieldNames, firstRow, OnlyToJson ? Action.OnlySave : Action.PostCall);
                             MessageBox.Show($"Total Entries Sent - {count}", "Job Done");
 
                         }
@@ -280,7 +280,7 @@ namespace FromExcelToJson
                     var response = CallAPI("", BaseURL, ApiURL, Credentials, false);
                     FileInfo infile = new FileInfo(ExcelFileName);
                     string outputFilejson = ExcelFileName.Replace(infile.Extension, $"_Response.json");
-                    File.WriteAllText(outputFilejson, response.Content.ReadAsStringAsync().Result);
+                    WriteJsonToFile(outputFilejson, response.Content.ReadAsStringAsync().Result);
                 }
             }
             catch (Exception ex)
@@ -298,12 +298,12 @@ namespace FromExcelToJson
             PostCall,
             OnlySave
         }
-        private long GenerateJsonFile(string outputFile, ExcelWorksheet ws,
+        private long PostCallJson(string outputFile, ExcelWorksheet ws,
             ExcelCellAddress start, ExcelCellAddress end, Dictionary<int, string> fieldNames, int firstRow, Action action)
         {
             long count = 0;
             FileInfo infile = new FileInfo(outputFile);
-            for (int jsonStartRow = firstRow, jsonendRow = jsonStartRow + 1499; jsonStartRow <= end.Row; jsonStartRow += 1500, jsonendRow += 1500)
+            for (int jsonStartRow = firstRow, jsonendRow = jsonStartRow + SplitInterval - 1; jsonStartRow <= end.Row; jsonStartRow += SplitInterval, jsonendRow += SplitInterval)
             {
                 StringBuilder sb = new StringBuilder();
                 StringWriter sw = new StringWriter(sb);
