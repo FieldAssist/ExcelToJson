@@ -35,6 +35,9 @@ namespace FromExcelToJson
         public const string FLD_Credentials = "Credentials";
         public const string FLD_IsGet = "IsGet";
         public const string FLD_IsPost = "IsPost";
+        public const string FLD_SplitInterval = "SplitInterval";
+        public const string FLD_OnlyToJson = "OnlyToJson";
+
 
 
         public static readonly DependencyProperty ExcelFileNameProperty = DependencyProperty.Register(
@@ -53,7 +56,10 @@ namespace FromExcelToJson
                     FLD_IsGet, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty IsPostProperty = DependencyProperty.Register(
                             FLD_IsPost, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-
+        public static readonly DependencyProperty SplitIntervalProperty = DependencyProperty.Register(
+                            FLD_SplitInterval, typeof(int), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty OnlyToJsonProperty = DependencyProperty.Register(
+                            FLD_OnlyToJson, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         #endregion Public Fields
 
         #region Public Constructors
@@ -62,8 +68,12 @@ namespace FromExcelToJson
         {
             InitializeComponent();
             this.DataContext = this;
-            this.Credentials = "<USER>:TNU3RuVatbCx71gwMHxJlz0kP1sk7zttFxkX5dlrQA2p2";
-            this.BaseURL = "http://api-debug.fieldassist.in";
+            this.Credentials = "<USER>:<Pass>";
+            this.BaseURL = "http://<subdomain>.fieldassist.in";
+            this.SplitInterval = 1500;
+            this.OnlyToJson = true;
+            this.FirstRowHasFieldNames = true;
+
         }
 
         #endregion Public Constructors
@@ -84,7 +94,17 @@ namespace FromExcelToJson
                 this.SetValue(ExcelFileNameProperty, value);
             }
         }
-
+        public int SplitInterval
+        {
+            get
+            {
+                return (int)this.GetValue(SplitIntervalProperty);
+            }
+            set
+            {
+                this.SetValue(SplitIntervalProperty, value);
+            }
+        }
         public string BaseURL
         {
             get
@@ -119,7 +139,17 @@ namespace FromExcelToJson
                 this.SetValue(FirstRowHasFieldNamesProperty, value);
             }
         }
-
+        public bool OnlyToJson
+        {
+            get
+            {
+                return (bool)this.GetValue(OnlyToJsonProperty);
+            }
+            set
+            {
+                this.SetValue(OnlyToJsonProperty, value);
+            }
+        }
         public string Credentials
         {
             get
@@ -203,7 +233,7 @@ namespace FromExcelToJson
             {
                 this.Cursor = Cursors.Wait;
                 DoEvents();
-                if (IsPost)
+                if (IsPost || OnlyToJson)
                 {
                     FileInfo infile = new FileInfo(ExcelFileName);
                     using (ExcelPackage exp = new ExcelPackage(infile))
@@ -262,9 +292,14 @@ namespace FromExcelToJson
                 this.Cursor = c;
             }
         }
-
+        private enum Action
+        {
+            GetCall,
+            PostCall,
+            OnlySave
+        }
         private long GenerateJsonFile(string outputFile, ExcelWorksheet ws,
-            ExcelCellAddress start, ExcelCellAddress end, Dictionary<int, string> fieldNames, int firstRow)
+            ExcelCellAddress start, ExcelCellAddress end, Dictionary<int, string> fieldNames, int firstRow, Action action)
         {
             long count = 0;
             FileInfo infile = new FileInfo(outputFile);
@@ -305,15 +340,25 @@ namespace FromExcelToJson
                 sw.Close();
                 string outputFilejson = outputFile.Replace(infile.Extension, $"_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
                 string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
-                File.WriteAllText(outputFilejson, sb.ToString());
-
-                var response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
-                File.WriteAllText(responseFilejson, response.Content.ReadAsStringAsync().Result);
-                //ResultText = File.ReadAllText(outputFile);
+                switch (action)
+                {
+                    case Action.PostCall:
+                        WriteJsonToFile(outputFilejson, sb.ToString());
+                        var response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
+                        WriteJsonToFile(responseFilejson, response.Content.ReadAsStringAsync().Result);
+                        break;
+                    case Action.OnlySave:
+                        WriteJsonToFile(outputFilejson, sb.ToString());
+                        break;
+                }
             }
             return (count);
         }
 
+        private void WriteJsonToFile(string path, string Value)
+        {
+            File.WriteAllText(path, Value);
+        }
         private HttpResponseMessage CallAPI(string body, string baseURL, string api, string credentialString, bool IsXML = false)
         {
             HttpClient client = new HttpClient();
@@ -378,6 +423,7 @@ namespace FromExcelToJson
         }
 
         #endregion Private Methods
+
     }
 
     //public class SkuNorms

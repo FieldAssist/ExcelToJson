@@ -126,10 +126,12 @@
 				VerticalScrollBarVisibility="Auto"
 				TextWrapping="Wrap"
 				Text="{Binding ResultText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
         <Grid
 			Grid.Row="5">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -144,10 +146,39 @@
 				HorizontalAlignment="Stretch"
 				VerticalAlignment="Center"
 				IsChecked="{Binding FirstRowHasFieldNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-				Content="Field Names In first row"/>
+				Content="Headers In first row" Checked="CheckBox_Checked"/>
+            <CheckBox
+				Grid.Row="0"
+				Grid.Column="1"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+				IsChecked="{Binding OnlyToJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+				Content="Only ConvertToJson" Checked="CheckBox_Checked"/>
+            <TextBlock
+				Grid.Row="1"
+				Grid.Column="0"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Stretch"
+        	    Text="Interval to be Split At"
+                />
+            <Slider
+				Grid.Row="1"
+				Grid.Column="1"
+				Margin="4,2,4,2"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Stretch"
+				HorizontalContentAlignment="Left"
+				Value="{Binding SplitInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Minimum="100"
+                Maximum="10000"
+                Interval="100"
+                />
+
             <RadioButton
                 GroupName="method"
-                Grid.Row="1"
+                Grid.Row="2"
                 Grid.Column="0"
                 Margin="4,2,4,2"
                 HorizontalAlignment="Left"
@@ -157,7 +188,7 @@
                 />
             <RadioButton
                 GroupName="method"
-                Grid.Row="1"
+                Grid.Row="2"
                 Grid.Column="1"
                 Margin="4,2,4,2"
                 HorizontalAlignment="Left"
@@ -169,7 +200,7 @@
             <Button
 				Grid.Column="2"
                 Grid.Row="0"
-				Grid.RowSpan="2"
+				Grid.RowSpan="3"
 				Margin="4,2,4,2"
 				Padding="10,2,10,2"
 				Content="Run Api Call"
