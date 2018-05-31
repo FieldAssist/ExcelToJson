@@ -397,9 +397,16 @@ namespace FromExcelToJson
                     var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
                     var request = new HttpRequestMessage(HttpMethod.Post, api);
                     request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-                    var response = client.SendAsync(request).Result;
-                    //var response = client.PostAsJsonAsync(Api, validJson).Result;
-                    return response;
+                    try
+                    {
+                        var response = client.SendAsync(request).Result;
+                        //var response = client.PostAsJsonAsync(Api, validJson).Result;
+                        return response;
+                    }
+                    catch
+                    {
+                        return new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                    }
                     //return $"{baseURL}-{api}-{credentialString}-Post-JSON";
                 }
             }
