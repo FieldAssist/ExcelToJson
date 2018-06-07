@@ -340,7 +340,7 @@ namespace FromExcelToJson
                 }
                 else
                 {
-                    var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
+                    //var validJson = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
                     var request = new HttpRequestMessage(HttpMethod.Post, api);
                     request.Content = new StringContent(body, Encoding.UTF8, "application/json");
                     try
