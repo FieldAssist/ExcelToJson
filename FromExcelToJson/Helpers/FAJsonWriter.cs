@@ -13,30 +13,24 @@ namespace FromExcelToJson.Helpers
     public abstract class FAJsonWriter
     {
         private readonly ExcelWorksheet ws;
-        protected readonly Action<string> log;
         protected readonly ExcelCellAddress start;
         protected readonly ExcelCellAddress end;
         protected readonly Dictionary<int, string> fieldNames;
-        protected readonly int firstRow;
         public int Count { get; protected set; }
         public abstract string CreateJson(int jsonStartRow, int jsonendRow);
         public int EndRow => end.Row;
-        public FAJsonWriter(ExcelWorksheet ws, Action<string> logger)
+        public FAJsonWriter(ExcelWorksheet ws)
         {
             this.ws = ws;
-            this.log = logger;
             start = ws.Dimension.Start;
             end = ws.Dimension.End;
-
-
             fieldNames = new Dictionary<int, string>();
-            firstRow = start.Row;
             for (int x = start.Column; x <= end.Column; x++)
             {
                 fieldNames.Add(x, Regex.Replace(GetCellStringValue(start.Row, x), @"\s+", ""));
             }
-            firstRow++;
         }
+        public abstract bool IsValid();
         protected string GetCellStringValue(int row, int col)
         {
             object cVal = ws.Cells[row, col].Value;
@@ -52,7 +46,7 @@ namespace FromExcelToJson.Helpers
     {
         public string ResultText { get; private set; }
 
-        public FlatJsonWriter(ExcelWorksheet ws, Action<string> logger) : base(ws, logger)
+        public FlatJsonWriter(ExcelWorksheet ws) : base(ws)
         {
             Count = 0;
             ResultText = "";
@@ -60,6 +54,10 @@ namespace FromExcelToJson.Helpers
 
         public override string CreateJson(int jsonStartRow, int jsonendRow)
         {
+            if (!IsValid())
+            {
+                throw new Exception("Check Your Sheet... Some Issue!");
+            }
             StringBuilder sb = new StringBuilder();
             StringWriter sw = new StringWriter(sb);
             JsonWriter jsonWriter = null;
@@ -72,11 +70,6 @@ namespace FromExcelToJson.Helpers
             jsonWriter.WriteStartArray();
             for (int row = jsonStartRow; row <= jsonendRow && row <= end.Row; row++)
             {
-                Count++;
-                if (Count % 1000 == 0 || row >= end.Row)
-                {
-                    log($"Done upto Row {Count}\n{ResultText}");
-                }
                 jsonWriter.WriteStartObject();
                 for (int col = start.Column; col <= end.Column; col++)
                 {
@@ -92,20 +85,64 @@ namespace FromExcelToJson.Helpers
             sw.Close();
             return sb.ToString();
         }
+
+        public override bool IsValid()
+        {
+            return start.Column == 1 && end.Column >= 1 && start.Row == 1 && end.Row > 1;
+        }
     }
 
     public class TwoColumnGroupedJsonWriter : FAJsonWriter
     {
-        private readonly ExcelWorksheet ws;
-
-        public TwoColumnGroupedJsonWriter(ExcelWorksheet ws, Action<string> logger) : base(ws, logger)
+        private class DataModel
         {
-            this.ws = ws;
+            public string Col1 { get; set; }
+            public string Col2 { get; set; }
         }
 
+        private readonly ExcelWorksheet ws;
+
+        public TwoColumnGroupedJsonWriter(ExcelWorksheet ws) : base(ws)
+        {
+            this.ws = ws;
+
+        }
+        public override bool IsValid()
+        {
+            return start.Column == 1 && end.Column == 2 && start.Row == 1 && end.Row > 1;
+        }
         public override string CreateJson(int jsonStartRow, int jsonendRow)
         {
-            throw new NotImplementedException();
+            if (!IsValid())
+            {
+                throw new Exception("For Two Column Group, You need to have exactly two columns");
+            }
+
+            var data = new List<DataModel>();
+
+            for (int row = jsonStartRow; row <= jsonendRow && row <= end.Row; row++)
+            {
+                Count++;
+                data.Add(new DataModel
+                {
+                    Col1 = GetCellStringValue(row, 1),
+                    Col2 = GetCellStringValue(row, 2),
+                });
+            }
+
+            var dictionary = data.GroupBy(d => d.Col1).ToDictionary(d => d.Key, d => d.Select(v => v.Col2));
+            var arrayDictionary = dictionary.Select(d => new Dictionary<string, object> { [fieldNames[1]] = d.Key, [fieldNames[2]] = d.Value }).ToList();
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+            var jsonWriter = new JsonTextWriter(sw)
+            {
+                //Use indentation for readability.
+                Formatting = Formatting.Indented
+            };
+            jsonWriter.WriteRaw(JsonConvert.SerializeObject(arrayDictionary));
+            jsonWriter.Close();
+            sw.Close();
+            return sb.ToString();
         }
     }
 }

@@ -276,16 +276,13 @@ namespace FromExcelToJson
         private long PostCallJson(string outputFile, ExcelWorksheet ws)
         {
             FileInfo infile = new FileInfo(outputFile);
-            FAJsonWriter jsonWriter = TwoColumnGroupJson ? (FAJsonWriter)new TwoColumnGroupedJsonWriter(ws, LogToConsole) : new FlatJsonWriter(ws, LogToConsole);
+            FAJsonWriter jsonWriter = TwoColumnGroupJson ? (FAJsonWriter)new TwoColumnGroupedJsonWriter(ws) : new FlatJsonWriter(ws);
             var action = OnlyToJson ? Action.OnlySave : Action.PostCall;
 
             var endRow = jsonWriter.EndRow;
-
-
             for (int jsonStartRow = 2, jsonendRow = jsonStartRow + SplitInterval - 1; jsonStartRow <= endRow; jsonStartRow += SplitInterval, jsonendRow += SplitInterval)
             {
                 var jsonOutput = jsonWriter.CreateJson(jsonStartRow, jsonendRow);
-
                 string outputFilejson = outputFile.Replace(infile.Extension, $"_{jsonStartRow}-{(endRow > jsonendRow ? jsonendRow : endRow)}.json");
                 string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(endRow > jsonendRow ? jsonendRow : endRow)}.json");
                 switch (action)
@@ -299,8 +296,9 @@ namespace FromExcelToJson
                         WriteJsonToFile(outputFilejson, jsonOutput);
                         break;
                 }
+                LogToConsole($"Done upto Row {jsonendRow}");
             }
-            return (jsonWriter.Count);
+            return (endRow - 1);
         }
 
         private void WriteJsonToFile(string path, string Value)
