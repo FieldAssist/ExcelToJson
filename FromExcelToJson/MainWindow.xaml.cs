@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using FromExcelToJson.Helpers;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using System;
@@ -27,7 +28,6 @@ namespace FromExcelToJson
 
 
         public const string FLD_ExcelFileName = "ExcelFileName";
-        public const string FLD_FirstRowHasFieldNames = "FirstRowHasFieldNames";
 
         public const string FLD_ResultText = "ResultText";
         public const string FLD_BaseURL = "BaseURL";
@@ -37,6 +37,7 @@ namespace FromExcelToJson
         public const string FLD_IsPost = "IsPost";
         public const string FLD_SplitInterval = "SplitInterval";
         public const string FLD_OnlyToJson = "OnlyToJson";
+        public const string FLD_TwoColumnGroupJson = "TwoColumnGroupJson";
 
 
 
@@ -46,8 +47,6 @@ namespace FromExcelToJson
             FLD_BaseURL, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty ApiURLProperty = DependencyProperty.Register(
             FLD_ApiURL, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-        public static readonly DependencyProperty FirstRowHasFieldNamesProperty = DependencyProperty.Register(
-            FLD_FirstRowHasFieldNames, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty ResultTextProperty = DependencyProperty.Register(
             FLD_ResultText, typeof(string), typeof(MainWindow), new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty CredentialsProperty = DependencyProperty.Register(
@@ -60,6 +59,8 @@ namespace FromExcelToJson
                             FLD_SplitInterval, typeof(int), typeof(MainWindow), new FrameworkPropertyMetadata(1500, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         public static readonly DependencyProperty OnlyToJsonProperty = DependencyProperty.Register(
                             FLD_OnlyToJson, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        public static readonly DependencyProperty TwoColumnGroupJsonProperty = DependencyProperty.Register(
+                    FLD_TwoColumnGroupJson, typeof(bool), typeof(MainWindow), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
         #endregion Public Fields
 
         #region Public Constructors
@@ -72,8 +73,6 @@ namespace FromExcelToJson
             this.BaseURL = "http://<subdomain>.fieldassist.in";
             this.SplitInterval = 1500;
             this.OnlyToJson = true;
-            this.FirstRowHasFieldNames = true;
-
         }
 
         #endregion Public Constructors
@@ -105,6 +104,18 @@ namespace FromExcelToJson
                 this.SetValue(SplitIntervalProperty, value);
             }
         }
+        public bool TwoColumnGroupJson
+        {
+            get
+            {
+                return (bool)this.GetValue(TwoColumnGroupJsonProperty);
+            }
+            set
+            {
+                this.SetValue(TwoColumnGroupJsonProperty, value);
+            }
+        }
+
         public string BaseURL
         {
             get
@@ -128,17 +139,7 @@ namespace FromExcelToJson
                 this.SetValue(ApiURLProperty, value);
             }
         }
-        public bool FirstRowHasFieldNames
-        {
-            get
-            {
-                return (bool)this.GetValue(FirstRowHasFieldNamesProperty);
-            }
-            set
-            {
-                this.SetValue(FirstRowHasFieldNamesProperty, value);
-            }
-        }
+
         public bool OnlyToJson
         {
             get
@@ -210,21 +211,13 @@ namespace FromExcelToJson
         public object DoExitFrame(object f)
         {
             ((DispatcherFrame)f).Continue = false;
-
             return null;
         }
 
         #endregion Public Methods
 
         #region Private Methods
-        private static string GetCellStringValue(ExcelWorksheet wks, int row, int col)
-        {
-            object cVal = wks.Cells[row, col].Value;
-            if (cVal == null)
-                return null;
-            else
-                return cVal.ToString();
-        }
+
 
         private void GenerateJson_Click(object sender, RoutedEventArgs e)
         {
@@ -241,31 +234,7 @@ namespace FromExcelToJson
                         if (exp.Workbook.Worksheets.Count > 0)
                         {
                             ExcelWorksheet ws = exp.Workbook.Worksheets.First();
-                            var start = ws.Dimension.Start;
-                            var end = ws.Dimension.End;
-
-                            Dictionary<int, string> fieldNames = new Dictionary<int, string>();
-                            int firstRow = start.Row;
-                            if (FirstRowHasFieldNames)
-                            {
-                                for (int x = start.Column; x <= end.Column; x++)
-                                {
-                                    //fieldNames.Add(x, GetCellStringValue(ws, x, start.Row));
-                                    fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
-                                }
-                                firstRow++;
-                            }
-                            else
-                            {
-                                for (int x = start.Column; x <= end.Column; x++)
-                                {
-                                    //fieldNames.Add(x, string.Format("Column_{0}", x));
-                                    fieldNames.Add(x, Regex.Replace(GetCellStringValue(ws, start.Row, x), @"\s+", ""));
-                                }
-                                firstRow++;
-                            }
-
-                            var count = PostCallJson(ExcelFileName, ws, start, end, fieldNames, firstRow, OnlyToJson ? Action.OnlySave : Action.PostCall);
+                            var count = PostCallJson(ExcelFileName, ws);
                             MessageBox.Show($"Total Entries Sent - {count}", "Job Done");
 
                         }
@@ -298,61 +267,40 @@ namespace FromExcelToJson
             PostCall,
             OnlySave
         }
-        private long PostCallJson(string outputFile, ExcelWorksheet ws,
-            ExcelCellAddress start, ExcelCellAddress end, Dictionary<int, string> fieldNames, int firstRow, Action action)
+
+        private void LogToConsole(string str)
         {
-            long count = 0;
+            ResultText = $"{str}\n{ResultText}";
+            DoEvents();
+        }
+        private long PostCallJson(string outputFile, ExcelWorksheet ws)
+        {
             FileInfo infile = new FileInfo(outputFile);
-            for (int jsonStartRow = firstRow, jsonendRow = jsonStartRow + SplitInterval - 1; jsonStartRow <= end.Row; jsonStartRow += SplitInterval, jsonendRow += SplitInterval)
+            FAJsonWriter jsonWriter = TwoColumnGroupJson ? (FAJsonWriter)new TwoColumnGroupedJsonWriter(ws, LogToConsole) : new FlatJsonWriter(ws, LogToConsole);
+            var action = OnlyToJson ? Action.OnlySave : Action.PostCall;
+
+            var endRow = jsonWriter.EndRow;
+
+
+            for (int jsonStartRow = 2, jsonendRow = jsonStartRow + SplitInterval - 1; jsonStartRow <= endRow; jsonStartRow += SplitInterval, jsonendRow += SplitInterval)
             {
-                StringBuilder sb = new StringBuilder();
-                StringWriter sw = new StringWriter(sb);
-                JsonWriter jsonWriter = null;
-                jsonWriter = new JsonTextWriter(sw);
+                var jsonOutput = jsonWriter.CreateJson(jsonStartRow, jsonendRow);
 
-                //Use indentation for readability.
-                jsonWriter.Formatting = Newtonsoft.Json.Formatting.Indented;
-
-
-                // jsonWriter.WriteStartObject();
-                //jsonWriter.WritePropertyName(CollectionElement);
-                jsonWriter.WriteStartArray();
-                for (int row = jsonStartRow; row <= jsonendRow && row <= end.Row; row++)
-                {
-                    count++;
-                    if (count % 1000 == 0 || row >= end.Row)
-                    {
-                        ResultText = $"Done upto Row {count}\n{ResultText}";
-                        DoEvents();
-                    }
-                    jsonWriter.WriteStartObject();
-                    for (int col = start.Column; col <= end.Column; col++)
-                    {
-                        jsonWriter.WritePropertyName(fieldNames[col]);
-                        jsonWriter.WriteValue(GetCellStringValue(ws, row, col));
-                    }
-                    jsonWriter.WriteEndObject();
-
-                }
-                jsonWriter.WriteEndArray();
-                //jsonWriter.WriteEndObject();
-                jsonWriter.Close();
-                sw.Close();
-                string outputFilejson = outputFile.Replace(infile.Extension, $"_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
-                string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(end.Row > jsonendRow ? jsonendRow : end.Row)}.json");
+                string outputFilejson = outputFile.Replace(infile.Extension, $"_{jsonStartRow}-{(endRow > jsonendRow ? jsonendRow : endRow)}.json");
+                string responseFilejson = outputFile.Replace(infile.Extension, $"_Response_{jsonStartRow}-{(endRow > jsonendRow ? jsonendRow : endRow)}.json");
                 switch (action)
                 {
                     case Action.PostCall:
-                        WriteJsonToFile(outputFilejson, sb.ToString());
-                        var response = CallAPI(sb.ToString(), BaseURL, ApiURL, Credentials);//Enter the details to call the Api
+                        WriteJsonToFile(outputFilejson, jsonOutput);
+                        var response = CallAPI(jsonOutput, BaseURL, ApiURL, Credentials);//Enter the details to call the Api
                         WriteJsonToFile(responseFilejson, response.Content.ReadAsStringAsync().Result);
                         break;
                     case Action.OnlySave:
-                        WriteJsonToFile(outputFilejson, sb.ToString());
+                        WriteJsonToFile(outputFilejson, jsonOutput);
                         break;
                 }
             }
-            return (count);
+            return (jsonWriter.Count);
         }
 
         private void WriteJsonToFile(string path, string Value)
