@@ -146,8 +146,8 @@
 				Margin="4,2,4,2"
 				HorizontalAlignment="Stretch"
 				VerticalAlignment="Center"
-				IsChecked="{Binding FirstRowHasFieldNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-				Content="Headers In first row"/>
+				IsChecked="{Binding TwoColumnGroupJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+				Content="Two Column Groups" />
             <CheckBox
 				Grid.Row="0"
 				Grid.Column="1"
